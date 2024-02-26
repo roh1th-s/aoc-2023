@@ -91,7 +91,7 @@ fn part2(race: &Race) -> u64 {
 pub fn main() {
     let lines = String::from_utf8(include_bytes!("sample_input_data/day6.txt").to_vec())
         .unwrap()
-        .split("\r\n")
+        .split("\n")
         .map(|line| line.to_string())
         .collect::<Vec<String>>();
 

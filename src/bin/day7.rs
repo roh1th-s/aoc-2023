@@ -142,7 +142,7 @@ fn part2(hand_bid_pairs: &Vec<(String, u64)>) -> u64 {
 pub fn main() {
     let hand_bid_pairs = String::from_utf8(include_bytes!("sample_input_data/day7.txt").to_vec())
         .unwrap()
-        .split("\r\n")
+        .split("\n")
         .map(|line| {
             let mut line_split = line.split_whitespace();
 

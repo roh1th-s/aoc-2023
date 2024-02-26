@@ -179,7 +179,7 @@ fn part2(schematic_lines: &Vec<String>) -> u64 {
 pub fn main() {
     let schematic_lines = String::from_utf8(include_bytes!("sample_input_data/day3.txt").to_vec())
         .unwrap()
-        .split("\r\n")
+        .split("\n")
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
 

@@ -55,7 +55,7 @@ fn part2(card_lines: &Vec<String>) -> u64 {
 pub fn main() {
     let card_lines = String::from_utf8(include_bytes!("sample_input_data/day4.txt").to_vec())
         .unwrap()
-        .split("\r\n")
+        .split("\n")
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
 

@@ -4,7 +4,7 @@ type RangeMap = (Range<u64>, Range<u64>);
 type AlmanacData = HashMap<String, Vec<RangeMap>>;
 
 fn parse_sections_of_almanac(string: String) -> (Vec<u64>, AlmanacData) {
-    let sections = string.split("\r\n\r\n").collect::<Vec<&str>>();
+    let sections = string.split("\n\n").collect::<Vec<&str>>();
 
     let mut parsed_data: AlmanacData = HashMap::new();
     let mut seeds = vec![];
@@ -20,7 +20,7 @@ fn parse_sections_of_almanac(string: String) -> (Vec<u64>, AlmanacData) {
                 .map(|num_str| num_str.parse::<u64>().unwrap())
                 .collect::<Vec<u64>>();
         } else {
-            let mut lines = section.split("\r\n");
+            let mut lines = section.split("\n");
             let map_name = lines.nth(0).unwrap().replace("map:", "").trim().to_string(); // removes first line
 
             let mut range_maps: Vec<RangeMap> = vec![];
