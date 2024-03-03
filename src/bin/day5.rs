@@ -1,4 +1,7 @@
-use std::{collections::HashMap, ops::Range};
+use std::{
+    collections::{HashMap, VecDeque},
+    ops::Range,
+};
 
 type RangeMap = (Range<u64>, Range<u64>);
 type AlmanacData = HashMap<String, Vec<RangeMap>>;
@@ -48,7 +51,42 @@ fn parse_sections_of_almanac(string: String) -> (Vec<u64>, AlmanacData) {
     (seeds, parsed_data)
 }
 
-fn get_location_no_from_seed(seed_no: u64, almanac_data: &AlmanacData) -> u64 {
+fn get_overlapping(
+    test_range: &Range<u64>,
+    source_range: &Range<u64>,
+) -> (Option<Range<u64>>, Vec<Range<u64>>) {
+    let mut overlapping_range = None;
+    let mut remaining_ranges = vec![];
+
+    if test_range.start >= source_range.start && test_range.start < source_range.end {
+        // SSSSSSS
+        //  TTTT
+        if test_range.end > source_range.end {
+            // SSSSSSS
+            //    TTTTT
+            overlapping_range = Some(test_range.start..source_range.end);
+            remaining_ranges.push(source_range.end..test_range.end);
+        } else {
+            overlapping_range = Some(test_range.clone());
+        }
+    } else if test_range.start < source_range.start && test_range.end > source_range.start {
+        remaining_ranges.push(test_range.start..source_range.start);
+        if test_range.end <= source_range.end {
+            //   SSSSSSS
+            // TTTTT
+            overlapping_range = Some(source_range.start..test_range.end);
+        } else if test_range.end > source_range.end {
+            //   SSSSSSS
+            // TTTTTTTTTTT
+            overlapping_range = Some(source_range.clone());
+            remaining_ranges.push(source_range.end..test_range.end);
+        }
+    }
+
+    (overlapping_range, remaining_ranges)
+}
+
+fn get_dest_ranges_from_seed_range(seed_range: Range<u64>, almanac_data: &AlmanacData) -> Vec<Range<u64>> {
     let maps = vec![
         "seed-to-soil",
         "soil-to-fertilizer",
@@ -62,28 +100,56 @@ fn get_location_no_from_seed(seed_no: u64, almanac_data: &AlmanacData) -> u64 {
     .map(|&map_name| &almanac_data[map_name])
     .collect::<Vec<&Vec<RangeMap>>>();
 
-    let mut val = seed_no;
+    let mut curr_ranges: Vec<Range<u64>> = [seed_range].to_vec();
+    let mut dest_ranges: Vec<Range<u64>> = vec![];
 
     for map in maps {
-        for ranges in map {
-            let source_range = &ranges.0;
-            let destination_range = &ranges.1;
+        dest_ranges = vec![];
 
-            if source_range.contains(&val) {
-                let idx = val - source_range.start;
-                val = destination_range.start + idx;
-                break;
+        // create queue of current ranges that need to be mapped to dest_ranges
+        let mut curr_range_queue = VecDeque::from(curr_ranges);
+
+        while !curr_range_queue.is_empty() {
+            let curr_range = &mut curr_range_queue.pop_front().unwrap();
+
+            let mut found_overlap = false;
+
+            for ranges in map {
+                let source_range = &ranges.0;
+                let destination_range = &ranges.1;
+
+                // check overlap
+                let (overlap, remaining) = get_overlapping(curr_range, source_range);
+
+                if let Some(overlapping_range) = overlap {
+                    dest_ranges.push(
+                        destination_range.start + overlapping_range.start - source_range.start
+                            ..destination_range.start + overlapping_range.end - source_range.start,
+                    );
+
+                    // add the remaining ranges to the queue, to map them separately
+                    remaining
+                        .iter()
+                        .for_each(|r| curr_range_queue.push_back(r.clone()));
+                    found_overlap = true;
+                    break;
+                }
+            }
+
+            if !found_overlap {
+                dest_ranges.push(curr_range.clone());
             }
         }
+        curr_ranges = dest_ranges.clone();
     }
 
-    val
+    dest_ranges
 }
 
 fn part1(seeds: &Vec<u64>, parsed_data: &AlmanacData) -> u64 {
     seeds
         .iter()
-        .map(|seed_no| get_location_no_from_seed(*seed_no, parsed_data))
+        .map(|seed_no| get_dest_ranges_from_seed_range(*seed_no..*seed_no, parsed_data)[0].start)
         .min()
         .unwrap()
 }
@@ -93,8 +159,9 @@ fn part2(seeds: &Vec<u64>, parsed_data: &AlmanacData) -> u64 {
         .windows(2)
         .step_by(2)
         .map(|seed_range| {
-            (seed_range[0]..seed_range[0] + seed_range[1])
-                .map(|seed_no| get_location_no_from_seed(seed_no, parsed_data))
+            get_dest_ranges_from_seed_range(seed_range[0]..seed_range[0] + seed_range[1], parsed_data)
+                .iter()
+                .map(|dest_range| dest_range.start)
                 .min()
                 .unwrap()
         })
